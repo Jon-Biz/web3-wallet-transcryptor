@@ -1,0 +1,24 @@
+{
+  "name": "web3-wallet-transcryptor",
+  "version": "0.0.0",
+  "description": "A wrapper to handle transcryption of data via a web3 browser wallet",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=test jest --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jon-Biz/web3-wallet-transcryptor.git"
+  },
+  "keywords": [
+    "web3",
+    "metamask",
+    "encryption"
+  ],
+  "author": "Jonathan El-Bizri (github@elbizri.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Jon-Biz/web3-wallet-transcryptor/issues"
+  },
+  "homepage": "https://github.com/Jon-Biz/web3-wallet-transcryptor#readme"
+}
