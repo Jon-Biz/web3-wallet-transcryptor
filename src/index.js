@@ -7,11 +7,8 @@ class Transcryptor {
     this.ready = this.init()
   }
   
-  async init() {
-    await this._initWallet()
-  }
+  async _init() {
 
-  async _initWallet() {
     // Modern dapp browsers...
     if (window.ethereum) {
       this.web3Provider = window.ethereum
@@ -30,7 +27,6 @@ class Transcryptor {
       this.web3Provider = 
         window.web3.currentProvider
     }
-
     // If no injected web3 instance is detected, fall back to Ganache
     else {
       this.web3Provider = 
@@ -48,36 +44,34 @@ class Transcryptor {
             ( resolve
             , reject
               ) => {
-
                     const onResult =
                             ( error
                             , encryptionPublicKey
-                            ) => {
-                                    if (!error) {
-                                      this.encryptionPublicKey = 
-                                            encryptionPublicKey.result
+                              ) => {
+                                      if (!error) {
+                                        this.encryptionPublicKey = 
+                                              encryptionPublicKey.result
 
-                                      resolve(void 0)
-    
-                                    } else {
-                                      console.log(error)
-
-                                      reject(error)
+                                        resolve(void 0)    
+                                      } else {
+                                        
+                                        console.error(error)
+                                        reject(error)
+                                      }
                                     }
-                                  }
 
                     web3.eth
                       .getAccounts(
                         ( error
                         , accounts 
                         ) => {
-                              if (error) { console.log(error) }
+                              if (error) { console.error(error) }
 
                               const payload = {
-                                jsonrpc: '2.0',
-                                method: 'eth_getEncryptionPublicKey',
-                                params: [accounts[0]],
-                                from: accounts[0],
+                                jsonrpc: '2.0'
+                              , method: 'eth_getEncryptionPublicKey'
+                              , params: [accounts[0]]
+                              , from: accounts[0]
                               }
 
                               web3.currentProvider.sendAsync(
@@ -88,113 +82,13 @@ class Transcryptor {
                       )
                   }
 
-    const getKeyP = new Promise(retreivePublicKeyP)
+    const getKeyP = 
+            new Promise(retreivePublicKeyP)
 
     return getKeyP
   }
 
-  async generateKey() {
-    await this.ready
-
-    // pseudocryption
-    const val = Math.floor(100 * Math.random())
-
-    return {
-      publicKey: val
-    , privateKey: -val
-    }
-
-    // const keyPair =
-    //         await window.crypto.subtle
-    //                 .generateKey(
-    //                   {
-    //                     name: "AES-GCM",
-    //                     length: 256
-    //                   },
-    //                   true,
-    //                   ["encrypt", "decrypt"]
-    //                 )
-    //                 .then(keys => {
-    //                   debugger
-    //                 })
-
-      // console.log(keyPair)
-      // debugger
-      // return keyPair
-  }
-
-  async encrypt(data, key) {
-    await this.ready
-
-    const dataStr = JSON.stringify(data)
-    const dataArr = dataStr.split('')
-
-    const resultArr =
-            dataArr
-              .map(
-                char => `${char.charCodeAt(0)+key}`
-              )
-
-    const result = resultArr.join()
-
-    return result
-
-    // const enc     = new TextEncoder()
-    // const encoded = enc.encode(data)
-    
-    // // The iv must never be reused with a given key.
-    // const iv = 
-    //         window.crypto
-    //           .getRandomValues(new Uint8Array(12))
-    
-    // const ciphertext = 
-    //         await window.crypto.subtle.encrypt(
-    //                 { name: "AES-GCM"
-    //                 , iv: iv
-    //                 }
-    //               , key
-    //               , encoded
-    //               )
-    
-    // return ciphertext
-  }
-
-  async decrypt(ciphertext, key) {
-    await this.ready
-
-    const cipherArr = 
-            ciphertext.split(',')
-
-    const resultArr =
-            cipherArr
-              .map(
-                charCode => {
-                              const num = Number.parseInt(charCode)
-                              const str = String.fromCharCode(num + key) 
-
-                              return str
-                            }
-              )
-
-    const result = resultArr.join('')
-
-    return JSON.parse(result)
-
-    // const decrypted = await window.crypto.subtle.decrypt(
-    //   {
-    //     name: "AES-GCM",
-    //     iv: iv
-    //   },
-    //   key,
-    //   ciphertext
-    // )
-    
-    // const dec = new TextDecoder()
-
-    // return dec.decode(decrypted)
-  }
-
-  async encryptPublic(dataObj) {
+  async encryptPublicKey(dataObj) {
     await this.ready
 
     if (!this.encryptionPublicKey) await this._getPublicKey()
@@ -219,51 +113,49 @@ class Transcryptor {
     return encryptedMessage
   }
 
-  async decryptPublic(encryptedData) {
+  async decryptPrivateKey(encryptedData) {
     await this.ready
 
+    const web3 = this.web3
+
+    const decryptDataP = 
+            ( resolve
+            , reject
+              ) => {
+                      web3.eth
+                        .getAccounts(
+                            ( error
+                            , accounts
+                              ) => {
+                                    if (error) { console.log(error) }
+
+                                    const [ account ] = accounts
+
+                                    const payload = {
+                                      jsonrpc: '2.0'
+                                    , method: 'eth_decrypt'
+                                    , params: [encryptedData, account]
+                                    , from: account
+                                    }
+
+                                    const onResponse =
+                                            ( error
+                                            , dataObj
+                                              ) => {
+                                                      if (error) { reject(error)           }
+                                                      else       { resolve(dataObj.result) }
+                                                    }
+
+                                    web3.currentProvider
+                                      .sendAsync(
+                                        payload
+                                      , onResponse
+                                      )
+                                  }
+                            )
+                    }
     const dataP = 
-            new Promise(
-                  ( resolve
-                  , reject
-                    ) => {
-                          const web3 = this.web3
-
-                          web3.eth
-                            .getAccounts(
-                                  ( error
-                                  , accounts
-                                    ) => {
-                                          if (error) { console.log(error) }
-
-                                          const account = accounts[0]
-
-                                          const payload = {
-                                            jsonrpc: '2.0',
-                                            method: 'eth_decrypt',
-                                            params: [encryptedData, account],
-                                            from: account
-                                          }
-
-                                          const onResponse =
-                                                  ( error
-                                                  , dataObj
-                                                    ) => {
-                                                          if (error) { reject(error) }
-                                                          else {
-                                                            resolve(dataObj.result)
-                                                          }
-                                                        }
-
-                                          web3.currentProvider
-                                            .sendAsync(
-                                              payload
-                                            , onResponse
-                                            )
-                                        }
-                                )
-                        }
-              )
+            new Promise( decryptDataP )
 
     return dataP
   }
