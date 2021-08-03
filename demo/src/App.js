@@ -21,12 +21,19 @@ function App() {
   }
 
   testEncryption()
-
+  
+  const encryptData = () => {
+    alert('did the thing')
+  }
   return (
     <div className="App">
-      <header className="App-header">
           Metamask encryption/decryption demo app
-      </header>
+      <p>
+        Your data:
+          <input type="text"></input>
+          <button onClick={encryptData} >Encrypt</button>
+
+      </p>
     </div>
   );
 }
