@@ -20,5 +20,9 @@
   "bugs": {
     "url": "https://github.com/Jon-Biz/web3-wallet-transcryptor/issues"
   },
-  "homepage": "https://github.com/Jon-Biz/web3-wallet-transcryptor#readme"
+  "homepage": "https://github.com/Jon-Biz/web3-wallet-transcryptor#readme",
+  "devDependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.14.5",
+    "jest-cucumber": "^3.0.1"
+  }
 }
