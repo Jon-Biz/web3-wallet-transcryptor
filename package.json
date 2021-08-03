@@ -22,7 +22,11 @@
   },
   "homepage": "https://github.com/Jon-Biz/web3-wallet-transcryptor#readme",
   "devDependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.14.5",
-    "jest-cucumber": "^3.0.1"
+    "@babel/plugin-transform-modules-commonjs": "^7.14.5"
+  },
+  "dependencies": {
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "web3": "^1.5.0"
   }
 }

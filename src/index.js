@@ -1,16 +1,60 @@
-import sigUtil from 'eth-sig-util'
+import nacl from 'tweetnacl'
+import naclUtil from 'tweetnacl-util'
 
-class Eth {
+import Web3 from 'web3'; 
+
+function encrypt(receiverPublicKey, msgParams, version) {
+  switch (version) {
+      case 'x25519-xsalsa20-poly1305': {
+          if (typeof msgParams.data !== 'string') {
+              throw new Error('Cannot detect secret message, message params should be of the form {data: "secret message"} ');
+          }
+          // generate ephemeral keypair
+          const ephemeralKeyPair = nacl.box.keyPair();
+          // assemble encryption parameters - from string to UInt8
+          let pubKeyUInt8Array;
+          try {
+              pubKeyUInt8Array = naclUtil.decodeBase64(receiverPublicKey);
+          }
+          catch (err) {
+              throw new Error('Bad public key');
+          }
+          const msgParamsUInt8Array = naclUtil.decodeUTF8(msgParams.data);
+          const nonce = nacl.randomBytes(nacl.box.nonceLength);
+          // encrypt
+          const encryptedMessage = nacl.box(msgParamsUInt8Array, nonce, pubKeyUInt8Array, ephemeralKeyPair.secretKey);
+          // handle encrypted data
+          const output = {
+              version: 'x25519-xsalsa20-poly1305',
+              nonce: naclUtil.encodeBase64(nonce),
+              ephemPublicKey: naclUtil.encodeBase64(ephemeralKeyPair.publicKey),
+              ciphertext: naclUtil.encodeBase64(encryptedMessage),
+          };
+          // return encrypted msg data
+          return output;
+      }
+      default:
+          throw new Error('Encryption type/version not supported');
+  }
+}
+
+
+class Transcryptor {
+
+  constructor() {
+    this.ready = this.init()
+  }
   
   async init() {
-    await this.initWallet()
-    await this.getEncryptionKey()
+    await this._initWallet()
+    await this._getPublicKey()
   }
 
-  async initWallet() {
+  async _initWallet() {
     // Modern dapp browsers...
     if (window.ethereum) {
       this.web3Provider = window.ethereum
+
       try {
         // Request account access
         await window.ethereum.enable()
@@ -31,48 +75,55 @@ class Eth {
     this.web3 = new Web3(this.web3Provider)
   }
 
-  getEncryptionKey() {
+  _getPublicKey() {
+
     const getKeyP =
             new Promise(
               ( resolve
               , reject
-                ) => {
-                      const web3 = this.web3
-                      const onResult =
-                              ( error
-                              , encryptionPublicKey
-                              ) => {
-                                    if (!error) {
-                                      this.encryptionPublicKey = encryptionPublicKey.result
+              ) => {
+                    const web3 = this.web3
 
-                                      resolve(void 0)
-                                    } else {
-                                      console.log(error)
-                                      reject(error)
-                                    }
-                                   }
+                    const onResult =
+                            ( error
+                            , encryptionPublicKey
+                            ) => {
+                                  if (!error) {
+                                    this.encryptionPublicKey = encryptionPublicKey.result
 
-                      web3.eth.getAccounts(
+                                    resolve(void 0)
+                                  } else {
+                                    console.log(error)
+                                    reject(error)
+                                  }
+                                  }
+
+                    web3.eth
+                      .getAccounts(
                         ( error
-                        , accounts ) => {
-                        if (error) { console.log(error) }
+                        , accounts 
+                        ) => {
+                              if (error) { console.log(error) }
 
-                        web3.currentProvider.sendAsync({
-                            jsonrpc: '2.0',
-                            method: 'eth_getEncryptionPublicKey',
-                            params: [accounts[0]],
-                            from: accounts[0],
-                          }
-                        , onResult
-                        )
-                      })
-                    }
+                              web3.currentProvider.sendAsync({
+                                  jsonrpc: '2.0',
+                                  method: 'eth_getEncryptionPublicKey',
+                                  params: [accounts[0]],
+                                  from: accounts[0],
+                                }
+                              , onResult
+                              )
+                            }
+                      )
+                  }
             )
 
     return getKeyP
   }
 
   async generateKey() {
+    await this.ready
+
     // pseudocryption
     const val = Math.floor(100 * Math.random())
 
@@ -98,13 +149,14 @@ class Eth {
       // console.log(keyPair)
       // debugger
       // return keyPair
-    }
+  }
 
   async encrypt(data, key) {
+    await this.ready
+
     const dataStr = JSON.stringify(data)
     const dataArr = dataStr.split('')
 
-    debugger
     const resultArr =
             dataArr
               .map(
@@ -115,38 +167,47 @@ class Eth {
 
     return result
 
-
-    // const enc = new TextEncoder()
-    // const encoded = enc.encode(message)
-    //
+    // const enc     = new TextEncoder()
+    // const encoded = enc.encode(data)
+    
     // // The iv must never be reused with a given key.
-    // const iv = window.crypto.getRandomValues(new Uint8Array(12))
-    //
-    // const ciphertext = await window.crypto.subtle.encrypt(
-    //   {
-    //     name: "AES-GCM",
-    //     iv: iv
-    //   },
-    //   key,
-    //   encoded
-    // )
-    //
+    // const iv = 
+    //         window.crypto
+    //           .getRandomValues(new Uint8Array(12))
+    
+    // const ciphertext = 
+    //         await window.crypto.subtle.encrypt(
+    //                 { name: "AES-GCM"
+    //                 , iv: iv
+    //                 }
+    //               , key
+    //               , encoded
+    //               )
+    
     // return ciphertext
   }
 
   async decrypt(ciphertext, key) {
-    const cipherArr = ciphertext.split(',')
+    await this.ready
+
+    const cipherArr = 
+            ciphertext.split(',')
+
     const resultArr =
             cipherArr
               .map(
                 charCode => {
-                  const num = Number.parseInt(charCode)
-                  return String.fromCharCode(num + key) }
+                              const num = Number.parseInt(charCode)
+                              const str = String.fromCharCode(num + key) 
+
+                              return str
+                            }
               )
 
     const result = resultArr.join('')
 
     return JSON.parse(result)
+
     // const decrypted = await window.crypto.subtle.decrypt(
     //   {
     //     name: "AES-GCM",
@@ -155,105 +216,82 @@ class Eth {
     //   key,
     //   ciphertext
     // )
-    //
+    
     // const dec = new TextDecoder()
+
     // return dec.decode(decrypted)
   }
 
-  async encryptUser(data) {
+  async encryptPublic(dataObj) {
+    await this.ready
+
+    const data = JSON.stringify(dataObj)
+
+    const encryptedData = 
+            encrypt(
+              this.encryptionPublicKey
+            , { data }
+            , 'x25519-xsalsa20-poly1305'
+            )
 
     const encryptedMessage =
-            this.web3.toHex(
+            this.web3.utils.asciiToHex(
               JSON.stringify(
-                sigUtil.encrypt(
-                  this.encryptionPublicKey
-                , { data }
-                , 'x25519-xsalsa20-poly1305')
+                encryptedData
               )
             )
 
     return encryptedMessage
   }
 
-  async decryptUser(encryptedData) {
-    const dataP = new Promise(
-      ( resolve
-      , reject
-        ) => {
-        const web3 = this.web3
+  async decryptPublic(encryptedData) {
+    await this.ready
 
-        web3.eth.getAccounts(
-          ( error
-          , accounts
-            ) => {
-                  if (error) { console.log(error) }
+    const dataP = 
+            new Promise(
+                  ( resolve
+                  , reject
+                    ) => {
+                          const web3 = this.web3
 
-                  const account = accounts[0]
+                          web3.eth
+                            .getAccounts(
+                                  ( error
+                                  , accounts
+                                    ) => {
+                                          if (error) { console.log(error) }
 
-                  const payload = {
-                    jsonrpc: '2.0',
-                    method: 'eth_decrypt',
-                    params: [encryptedData, account],
-                    from: account
-                  }
+                                          const account = accounts[0]
 
-                  const onResponse =
-                          ( error
-                          , dataObj
-                            ) => {
-                                  if (error) { reject(error) }
-                                  else {
-                                    resolve(dataObj.result)
-                                  }
-                                 }
+                                          const payload = {
+                                            jsonrpc: '2.0',
+                                            method: 'eth_decrypt',
+                                            params: [encryptedData, account],
+                                            from: account
+                                          }
 
-                  web3.currentProvider
-                    .sendAsync(
-                      payload
-                    , onResponse
-                    )
-                 }
-        )
-      })
+                                          const onResponse =
+                                                  ( error
+                                                  , dataObj
+                                                    ) => {
+                                                          if (error) { reject(error) }
+                                                          else {
+                                                            resolve(dataObj.result)
+                                                          }
+                                                        }
+
+                                          web3.currentProvider
+                                            .sendAsync(
+                                              payload
+                                            , onResponse
+                                            )
+                                        }
+                                )
+                        }
+              )
 
     return dataP
   }
-
-  putRootAddr(userObj) {
-
-    // const key      = userObj.publicKey
-    // const response =
-    //         await fetch(
-    //           `REP_HOST_URL/set/${key}`
-    //         , {
-    //           method: 'POST', // *GET, POST, PUT, DELETE, etc.
-    //           mode: 'cors', // no-cors, *cors, same-origin
-    //           cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-    //           credentials: 'same-origin', // include, *same-origin, omit
-    //           headers: {
-    //             'Content-Type': 'application/json'
-    //             // 'Content-Type': 'application/x-www-form-urlencoded',
-    //           },
-    //           redirect: 'follow', // manual, *follow, error
-    //           referrerPolicy: 'no-referrer', // no-referrer, *client
-    //           body: JSON.stringify(userObj) // body data type must match "Content-Type" header
-    //         })
-    //
-    // return await response.status // parses JSON response into native JavaScript objects
-  }
-
-  async getRootAddr() {
-    const key = this.encryptionPublicKey
-
-    const response =
-            await fetch(
-              `REP_HOST_URL/get/${key}`
-            )
-
-    const unencryptedAddr = this.decryptUser(await response.json())
-
-    return unencryptedAddr
-  }
 }
 
-export default Eth
+export default Transcryptor
