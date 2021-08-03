@@ -1,38 +1,52 @@
 import './App.css';
+import React, { useState } from 'react'
 import Transcryptor from 'transcryptor'
 
-function App() {
+const transcryptor = new Transcryptor()
 
-  const transcryptor = new Transcryptor()
+const App = () => {
+  const [ text, setText ] = useState('your data here')
+  const [ encryptedData, setEncrypted ] = useState('')
+  const [ decryptedData, setDecrypted ]  = useState('')
 
   async function testDecryption(encryptedData) {
     const decryptedData = await transcryptor.decryptPublic(encryptedData)
 
-    console.log({decryptedData})
+    console.log(decryptedData)
+    return decryptedData
   }
 
-  async function testEncryption() {
-    const data = { hello: 'world' }
-
+  async function testEncryption(data) {
     const encryptedData = await transcryptor.encryptPublic(data)
 
-    console.log({encryptedData})
-    testDecryption(encryptedData)
+    return encryptedData
+  }
+  
+  const encryptData = async () => {
+    const encryptedData = await testEncryption(text)
+    setEncrypted(encryptedData)
+
+    const decryptedData = await testDecryption(encryptedData)
+    setDecrypted(decryptedData)
   }
 
-  testEncryption()
-  
-  const encryptData = () => {
-    alert('did the thing')
-  }
   return (
     <div className="App">
-          Metamask encryption/decryption demo app
+      <h1>
+      Web3 wallet encryption/decryption demo app
+        </h1>
       <p>
         Your data:
-          <input type="text"></input>
+          <input onChange={e => setText(e.target.val)} value={text} type="text"></input>
           <button onClick={encryptData} >Encrypt</button>
-
+      </p>
+      <p>
+        Your encrypted data:
+          { encryptedData }
+      </p>
+      <p>
+        Your decrypted data:
+          { decryptedData }
       </p>
     </div>
   );
