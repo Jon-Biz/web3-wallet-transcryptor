@@ -5,29 +5,25 @@ import Transcryptor from 'transcryptor'
 const transcryptor = new Transcryptor()
 
 const App = () => {
-  const [ text, setText ] = useState('your data here')
+  const [ text,          setText      ] = useState('your data here')
   const [ encryptedData, setEncrypted ] = useState('')
-  const [ decryptedData, setDecrypted ]  = useState('')
+  const [ decryptedData, setDecrypted ] = useState('')
 
-  async function testDecryption(encryptedData) {
+  const decryptData = async () => {
+    setDecrypted('')
+
     const decryptedData = await transcryptor.decryptPublic(encryptedData)
 
-    console.log(decryptedData)
-    return decryptedData
-  }
-
-  async function testEncryption(data) {
-    const encryptedData = await transcryptor.encryptPublic(data)
-
-    return encryptedData
-  }
-  
-  const encryptData = async () => {
-    const encryptedData = await testEncryption(text)
-    setEncrypted(encryptedData)
-
-    const decryptedData = await testDecryption(encryptedData)
     setDecrypted(decryptedData)
+  }
+
+  const encryptData = async () => {
+    setEncrypted('')
+    setDecrypted('')
+
+    const encryptedData = await transcryptor.encryptPublic(text)
+
+    setEncrypted(encryptedData)
   }
 
   return (
@@ -38,11 +34,16 @@ const App = () => {
       <p>
         Your data:
           <input onChange={e => setText(e.target.val)} value={text} type="text"></input>
-          <button onClick={encryptData} >Encrypt</button>
+          <button onClick={encryptData} >Encrypt with public key</button>
       </p>
       <p>
         Your encrypted data:
           { encryptedData }
+          {
+            (encryptedData.length !== 0)
+            ? <button onClick={decryptData} >Decrypt</button>
+            : null
+          }
       </p>
       <p>
         Your decrypted data:
