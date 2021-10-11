@@ -4,7 +4,7 @@ import Web3 from 'web3';
 class Transcryptor {
 
   constructor() {
-    this.ready = this.init()
+    this.ready = this._init()
   }
   
   async _init() {
