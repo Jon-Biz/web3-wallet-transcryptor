@@ -17,14 +17,14 @@ const data = 'hello world'
 // Encrypt with public key
 
 const encryptedPrivateData = await transcryptor.encryptDataPublicKey(data)
-const decryptedPrivateData = await transcryptor.decryptDataPrivateKey(encryptedData)
+const decryptedPrivateData = await transcryptor.decryptDataPrivateKey(encryptedPrivateData)
 
 assert.equal(data, decryptedPrivateData)
 
 // Encrypt with private key
 
 const encryptedPublicData = await transcryptor.encryptDataPrivateKey(data)
-const decryptedPublicData = await transcryptor.decryptDataPublicKey(encryptedData)
+const decryptedPublicData = await transcryptor.decryptDataPublicKey(encryptedPublicData)
 
 assert.equal(data, decryptedPublicData)
 
